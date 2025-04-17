@@ -40,14 +40,29 @@ func (c *Client) ReadPump() {
 	})
 
 	for {
-		_, message, err := c.Conn.ReadMessage()
+		messageType, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
-		c.Hub.Broadcast <- message
+
+		// Handle different message types
+		switch messageType {
+		case websocket.TextMessage:
+			c.Hub.Broadcast <- message
+		case websocket.BinaryMessage:
+			// Handle binary messages if needed
+			c.Hub.Broadcast <- message
+		case websocket.PingMessage:
+			// Respond to ping with pong
+			c.Conn.WriteMessage(websocket.PongMessage, nil)
+		case websocket.PongMessage:
+			// Handle pong messages
+		default:
+			log.Printf("Received unknown message type: %d", messageType)
+		}
 	}
 }
 
@@ -108,4 +123,6 @@ const (
 	maxMessageSize = 512
 )
 
-var newline = []byte{'\n'}
+var (
+	newline = []byte{'\n'}
+)

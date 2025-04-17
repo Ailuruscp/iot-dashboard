@@ -14,7 +14,7 @@ import (
 
 // Handler handles HTTP requests
 type Handler struct {
-	hub          *Hub
+	hub           *Hub
 	deviceManager *device.DeviceManager
 	logger        *log.Logger
 	upgrader      websocket.Upgrader
@@ -23,14 +23,15 @@ type Handler struct {
 // NewHandler creates a new API handler
 func NewHandler(hub *Hub, deviceManager *device.DeviceManager, logger *log.Logger) *Handler {
 	return &Handler{
-		hub:          hub,
+		hub:           hub,
 		deviceManager: deviceManager,
 		logger:        logger,
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 			CheckOrigin: func(r *http.Request) bool {
-				return true // In production, implement proper origin checking
+				// Always allow WebSocket connections for development
+				return true
 			},
 		},
 	}
@@ -45,7 +46,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/devices/{id}", h.UnregisterDevice).Methods("DELETE")
 	router.HandleFunc("/api/devices/{id}/data", h.UpdateDeviceData).Methods("POST")
 
-	// WebSocket endpoint
+	// WebSocket endpoint - allow all methods
 	router.HandleFunc("/ws", h.ServeWS)
 
 	// Serve static files
@@ -54,17 +55,30 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 
 // ServeWS handles WebSocket connections
 func (h *Handler) ServeWS(w http.ResponseWriter, r *http.Request) {
+	h.logger.Printf("WebSocket connection request from %s", r.RemoteAddr)
+	h.logger.Printf("Request headers: %v", r.Header)
+
 	deviceID := r.URL.Query().Get("device_id")
 	if deviceID == "" {
+		h.logger.Printf("WebSocket connection rejected: device_id is required")
 		http.Error(w, "device_id is required", http.StatusBadRequest)
 		return
 	}
+
+	h.logger.Printf("WebSocket connection request from device: %s", deviceID)
+
+	// Set CORS headers
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		h.logger.Printf("Error upgrading connection: %v", err)
 		return
 	}
+
+	h.logger.Printf("WebSocket connection established with device: %s", deviceID)
 
 	client := NewClient(conn, h.hub, deviceID)
 	client.Hub.Register <- client

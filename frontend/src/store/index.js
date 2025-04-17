@@ -47,7 +47,7 @@ export default createStore({
     async fetchDevices({ commit }) {
       commit('SET_LOADING', true)
       try {
-        const response = await api.get('/api/devices')
+        const response = await api.get('/devices')
         commit('SET_DEVICES', response.data)
         commit('SET_ERROR', null)
       } catch (error) {
@@ -60,7 +60,7 @@ export default createStore({
     async fetchDeviceById({ commit }, id) {
       commit('SET_LOADING', true)
       try {
-        const response = await api.get(`/api/devices/${id}`)
+        const response = await api.get(`/devices/${id}`)
         commit('SET_SELECTED_DEVICE', response.data)
         commit('SET_ERROR', null)
       } catch (error) {
@@ -73,7 +73,7 @@ export default createStore({
     async registerDevice({ commit, dispatch }, deviceData) {
       commit('SET_LOADING', true)
       try {
-        await api.post('/api/devices', deviceData)
+        await api.post('/devices', deviceData)
         commit('SET_ERROR', null)
         dispatch('fetchDevices')
       } catch (error) {
@@ -86,7 +86,7 @@ export default createStore({
     async unregisterDevice({ commit, dispatch }, id) {
       commit('SET_LOADING', true)
       try {
-        await api.delete(`/api/devices/${id}`)
+        await api.delete(`/devices/${id}`)
         commit('SET_ERROR', null)
         dispatch('fetchDevices')
       } catch (error) {
@@ -98,7 +98,7 @@ export default createStore({
     },
     async updateDeviceData({ commit }, { id, data }) {
       try {
-        await api.post(`/api/devices/${id}/data`, data)
+        await api.post(`/devices/${id}/data`, data)
         commit('SET_ERROR', null)
       } catch (error) {
         commit('SET_ERROR', 'Failed to update device data')
@@ -106,11 +106,14 @@ export default createStore({
       }
     },
     connectWebSocket({ commit, dispatch }) {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const ws = new WebSocket(`${protocol}//localhost:8080/ws?device_id=dashboard`)
+      // Use a direct connection to the backend server
+      const wsUrl = 'ws://localhost:8080/ws?device_id=dashboard'
+      console.log('Connecting to WebSocket:', wsUrl)
+      
+      const ws = new WebSocket(wsUrl)
       
       ws.onopen = () => {
-        console.log('WebSocket connected')
+        console.log('WebSocket connected successfully')
         commit('SET_WS_CONNECTED', true)
         commit('SET_ERROR', null)
       }
@@ -126,8 +129,8 @@ export default createStore({
         }
       }
       
-      ws.onclose = () => {
-        console.log('WebSocket disconnected')
+      ws.onclose = (event) => {
+        console.log('WebSocket disconnected:', event.code, event.reason)
         commit('SET_WS_CONNECTED', false)
         // Attempt to reconnect after 5 seconds
         setTimeout(() => {

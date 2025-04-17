@@ -4,12 +4,14 @@ module.exports = {
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
-        changeOrigin: true,
-        ws: true
-      },
-      '/ws': {
-        target: 'ws://localhost:8080',
-        ws: true
+        changeOrigin: true
+      }
+    },
+    client: {
+      webSocketURL: {
+        hostname: 'localhost',
+        pathname: '/dev-server-ws',
+        port: 8086
       }
     }
   }
